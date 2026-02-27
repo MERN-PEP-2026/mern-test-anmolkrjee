@@ -1,6 +1,7 @@
 import './App.css'
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Register from './Components/Register';
+import TaskDashboard from './Components/TaskDashboard';
 
 function App() {
   const navbarRouter = createBrowserRouter([
@@ -8,7 +9,10 @@ function App() {
       path: '/',
       element: <Register />
     },
-    
+    {
+      path: '/home',
+      element: <TaskDashboard />
+    }
   ])
 
   return (
