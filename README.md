@@ -2,6 +2,10 @@
 
 A full-stack MERN application for user authentication and task management with subtasks, status tracking, and priority/due-date organization.
 
+## Live Demo
+
+🔗 https://taskmanagement-eight-psi.vercel.app/
+
 ## About This Project (6 Points)
 
 1. **Secure user flow** – Users can register and log in, and are redirected to the dashboard on successful authentication.
