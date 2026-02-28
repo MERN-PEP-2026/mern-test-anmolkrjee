@@ -14,6 +14,8 @@ import AddSubTask from "../controllers/AddSubTasks.js"
 router.post('/api/auth/register', Register)
 router.post('/api/auth/login', Login)
 router.post('/api/addtasks', TaskAdd)
+// Support the frontend expectation of /api/tasks for fetching tasks
+router.post('/api/tasks', GetAllTask)
 router.get('/api/tasks/:id', TaskWithId)
 router.put('/api/tasks/:id', TaskUpdate)
 router.delete('/api/tasks/:id', TaskDelete)

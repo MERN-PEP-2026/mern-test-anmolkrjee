@@ -62,38 +62,63 @@ const TaskDashboard = () => {
     const handleCreateTask = () => {
         if (!validateForm()) return;
 
+        // Grab user id from navigation state or fallback to localStorage to survive page refreshes
+        const userId = location.state?.User_ID ?? JSON.parse(localStorage.getItem('userId'))
+        if (!userId) {
+            console.error('Missing user id; redirecting to login')
+            Navigate('/')
+            return
+        }
+
         const newTask = {
-            User_ID: location.state.User_ID,
+            User_ID: userId,
             title: formData.title,
             description: formData.description,
             dueDate: formData.dueDate,
             priorityLevel: formData.priorityLevel,
         }
 
-        axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/addtasks`, newTask).then((res) => {
-            axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/tasks/${res.data.id}/subtasks`, { title: subtasks[0].title }).then((res) => {
-                if (res.status !== 200) {
-                    alert(res.data.message)
-                } else {
-                    setFormData({
-                        title: '',
-                        description: '',
-                        dueDate: '',
-                        priorityLevel: '',
-                    });
-                    setSubtasks([]);
-                    setDependencies([]);
-                    setShowSubtaskForm(false);
-                    setShowDependencyForm(false);
-                    setIsSubTaskAdded(false)
-                    Navigate('/home', { state: location.state })
+        axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/addtasks`, newTask)
+            .then((res) => {
+                const createdTaskId = res.data.id;
+
+                // If no subtasks were added, skip the subtask API call
+                if (!subtasks.length) {
+                    resetFormState();
+                    Navigate('/home', { state: location.state });
+                    return;
                 }
-            }).catch((err) => {
-                console.log("Subtask adding error", err)
+
+                axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/tasks/${createdTaskId}/subtasks`, { title: subtasks[0].title })
+                    .then((subRes) => {
+                        if (subRes.status !== 200) {
+                            alert(subRes.data.message);
+                        } else {
+                            resetFormState();
+                            Navigate('/home', { state: location.state });
+                        }
+                    })
+                    .catch((err) => {
+                        console.log("Subtask adding error", err);
+                    });
             })
-        }).catch((err) => {
-            console.log("Task adding error", err)
-        })
+            .catch((err) => {
+                console.log("Task adding error", err);
+            });
+    };
+
+    const resetFormState = () => {
+        setFormData({
+            title: '',
+            description: '',
+            dueDate: '',
+            priorityLevel: '',
+        });
+        setSubtasks([]);
+        setDependencies([]);
+        setShowSubtaskForm(false);
+        setShowDependencyForm(false);
+        setIsSubTaskAdded(false);
     };
 
     // Add subtask to form
@@ -115,8 +140,9 @@ const TaskDashboard = () => {
 
     // Add dependency to form
     const handleAddDependency = (taskId) => {
-        if (taskId && !dependencies.includes(parseInt(taskId))) {
-            setDependencies(prev => [...prev, parseInt(taskId)]);
+        // Keep Task_ID strings intact; backend Task_IDs look like "T123" so parseInt would break them
+        if (taskId && !dependencies.includes(taskId)) {
+            setDependencies(prev => [...prev, taskId]);
         }
     };
 
@@ -256,7 +282,7 @@ const TaskDashboard = () => {
     const isTaskBlocked = (task) => {
         if (!Array.isArray(task.dependencies)) return false;
         return task.dependencies.some(depId => {
-            const depTask = tasks.find(t => t.id === depId);
+            const depTask = tasks.find(t => t.Task_ID === depId);
             return depTask && depTask.status !== 'Completed';
         });
     };
@@ -265,14 +291,14 @@ const TaskDashboard = () => {
     const getBlockingDependencies = (task) => {
         if (!Array.isArray(task.dependencies)) return [];
         return task.dependencies
-            .map(depId => tasks.find(t => t.id === depId))
+            .map(depId => tasks.find(t => t.Task_ID === depId))
             .filter(depTask => depTask && depTask.status !== 'Completed');
     };
 
     const getDependentTasks = (task) => {
         if (!Array.isArray(task.dependents)) return [];
         return task.dependents
-            .map(depId => tasks.find(t => t.id === depId))
+            .map(depId => tasks.find(t => t.Task_ID === depId))
             .filter(Boolean);
     };
 
@@ -452,7 +478,7 @@ const TaskDashboard = () => {
                                     </select>
                                     <div className={TD.dependencyList}>
                                         {dependencies.map(depId => {
-                                            const depTask = tasks.find(t => t.id === depId);
+                                            const depTask = tasks.find(t => t.Task_ID === depId);
                                             return depTask ? (
                                                 <div key={depId} className={TD.dependencyItem}>
                                                     <span>{depTask.title}</span>
@@ -606,7 +632,7 @@ const TaskDashboard = () => {
                                         <div className={TD.dependencies}>
                                             <h4 className={TD.dependencyTitle}>Blocked by:</h4>
                                             {blockingDeps.map(dep => (
-                                                <div key={dep.id} className={TD.dependency}>
+                                                <div key={dep.Task_ID} className={TD.dependency}>
                                                     {dep.title} ({dep.status})
                                                 </div>
                                             ))}
@@ -618,7 +644,7 @@ const TaskDashboard = () => {
                                         <div className={TD.dependents}>
                                             <h4 className={TD.dependentTitle}>Blocking:</h4>
                                             {dependents.map(dep => (
-                                                <div key={dep.id} className={TD.dependent}>
+                                                <div key={dep.Task_ID} className={TD.dependent}>
                                                     {dep.title}
                                                 </div>
                                             ))}
